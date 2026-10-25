@@ -1,4 +1,4 @@
-export function animateElement(sourceElement, targetElement, duration = 400) {
+export function animateElement(sourceElement, targetElement, duration = 650) {
     return new Promise(resolve => {
         const sourceRect = sourceElement.getBoundingClientRect();
         const targetRect = targetElement.getBoundingClientRect();

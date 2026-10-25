@@ -33,6 +33,7 @@ export const game = {
     turn: 'ai',
     lastCapture: null,
     captureChoice: null,
+    pendingCaptureIds: [],
     isLocked: false,
     multiplayer: false,
     multiplayerHost: false,

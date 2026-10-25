@@ -2,6 +2,8 @@
 
 La cartella contiene una versione autonoma del gioco con partita singola, partita contro il computer e multiplayer online 1 contro 1.
 
+Il tavolo si adatta anche agli schermi dei telefoni. Quando una presa è individuata, le carte coinvolte vengono evidenziate per circa un secondo prima dell'animazione di raccolta.
+
 ## Avvio
 
 Apri `index.html` in un browser moderno. Per giocare online, entrambi i browser devono essere connessi a Internet e la pagina deve essere servita da `localhost` o da un sito HTTPS, perché WebRTC richiede un contesto sicuro.

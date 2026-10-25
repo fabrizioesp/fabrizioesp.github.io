@@ -6,6 +6,8 @@ import { calculateRoundScore } from './scoring.js';
 import { game, suits, values } from './state.js';
 import { disconnectNetwork, sendMessage } from './network.js';
 
+const CAPTURE_PREVIEW_DURATION = 1000;
+
 export function initGame(mode) {
     const matchTargets = { single: null, 11: 11, 21: 21 };
     if (!Object.hasOwn(matchTargets, mode)) {
@@ -56,6 +58,7 @@ function startRound() {
     game.aScope = 0;
     game.lastCapture = null;
     game.captureChoice = null;
+    game.pendingCaptureIds = [];
     game.isLocked = false;
 
     document.getElementById('deck-pile').className =
@@ -276,6 +279,10 @@ async function executePlay(cardIndex, isPlayer) {
 
         const tableElement = document.getElementById('table');
         const matchedCards = [card, ...match];
+        game.pendingCaptureIds = matchedCards.map(matchedCard => matchedCard.id);
+        renderGameBoard();
+        await new Promise(resolve => setTimeout(resolve, CAPTURE_PREVIEW_DURATION));
+
         const elementsToAnimate = matchedCards
             .map(matchedCard => Array.from(tableElement.children)
                 .find(child => child.id === `card-${matchedCard.id}`))
@@ -289,7 +296,8 @@ async function executePlay(cardIndex, isPlayer) {
         }
 
         playCardSound();
-        await Promise.all(elementsToAnimate.map(element => animateElement(element, targetPile, 500)));
+        await Promise.all(elementsToAnimate.map(element => animateElement(element, targetPile, 700)));
+        game.pendingCaptureIds = [];
 
         for (const matchedCard of matchedCards) {
             const index = game.tableCards.findIndex(tableCard => tableCard.id === matchedCard.id);

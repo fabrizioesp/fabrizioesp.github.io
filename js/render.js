@@ -18,6 +18,9 @@ export function renderBoard(localSeat, onPlayerPlay, onTableCardSelect, onConfir
     table.innerHTML = '';
     game.tableCards.forEach(card => {
         const element = createCardElement(card);
+        if (game.pendingCaptureIds.includes(card.id)) {
+            element.classList.add('capture-pending');
+        }
         const captureChoice = game.captureChoice;
         if (captureChoice?.availableCardIds.includes(card.id)) {
             element.classList.add('capture-selectable');
