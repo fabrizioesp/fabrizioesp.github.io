@@ -1,0 +1,366 @@
+body {
+    margin: 0;
+    padding: 0;
+    background-color: #277714;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: white;
+    overflow: hidden;
+    background-image: radial-gradient(circle, #33991a, #1c550e);
+    user-select: none;
+}
+
+.is-hidden {
+    display: none !important;
+}
+
+#game-board {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    justify-content: space-between;
+    position: relative;
+}
+
+.area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 140px;
+    position: relative;
+    width: 100%;
+    gap: 10px;
+}
+
+#table .card.capture-selectable {
+    cursor: pointer;
+    outline: 3px solid #ffd700;
+    outline-offset: 2px;
+}
+
+#table .card.capture-selected {
+    transform: translateY(-14px);
+    box-shadow: 0 0 14px 4px rgba(255, 215, 0, 0.9);
+}
+
+#capture-controls {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 12px 18px;
+    border: 1px solid #ffd700;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.88);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.45);
+    font-size: 16px;
+    font-weight: bold;
+}
+
+#capture-controls[hidden] {
+    display: none;
+}
+
+#capture-controls button {
+    padding: 8px 14px;
+    font-size: 16px;
+}
+
+#capture-controls button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+    transform: none;
+}
+
+.card {
+    width: 80px;
+    height: 125px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background-color: white;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: black;
+    font-weight: bold;
+    font-size: 14px;
+    position: relative;
+    overflow: hidden;
+}
+
+.card img,
+.scopa-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+}
+
+#player-hand .card:hover {
+    transform: translateY(-15px);
+    box-shadow: 2px 10px 15px rgba(0, 0, 0, 0.6);
+}
+
+.card-back {
+    background-color: #0044cc;
+    background-image:
+        repeating-linear-gradient(45deg, #0044cc 25%, transparent 25%, transparent 75%, #0044cc 75%, #0044cc),
+        repeating-linear-gradient(45deg, #0044cc 25%, #ffffff 25%, #ffffff 75%, #0044cc 75%, #0044cc);
+    background-position: 0 0, 10px 10px;
+    background-size: 20px 20px;
+}
+
+.card-back img {
+    display: none;
+}
+
+.capture-pile {
+    position: absolute;
+    width: 80px;
+    height: 125px;
+}
+
+#ai-captures {
+    top: 20px;
+    left: 20px;
+}
+
+#player-captures {
+    bottom: 20px;
+    left: 20px;
+}
+
+.scopa-card {
+    position: absolute;
+    width: 80px;
+    height: 125px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background-color: white;
+    transform: rotate(90deg);
+    z-index: 1;
+    top: 0;
+    overflow: hidden;
+}
+
+#deck-pile {
+    position: absolute;
+    right: 20px;
+    transition: top 0.5s, bottom 0.5s;
+    z-index: 10;
+}
+
+.deck-dealer-ai {
+    top: 20px;
+    bottom: auto;
+}
+
+.deck-dealer-player {
+    bottom: 20px;
+    top: auto;
+}
+
+#score-board {
+    position: absolute;
+    top: 10px;
+    right: 120px;
+    font-weight: bold;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 16px;
+    border: 1px solid #555;
+}
+
+#turn-status {
+    position: absolute;
+    top: 72px;
+    right: 20px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.55);
+    font-weight: bold;
+}
+
+#overlay,
+#mode-selection {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.9);
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    text-align: center;
+}
+
+#overlay {
+    display: none;
+}
+
+#mode-selection {
+    display: flex;
+    overflow-y: auto;
+    box-sizing: border-box;
+    padding: 24px;
+}
+
+#overlay h1,
+#mode-selection h1 {
+    color: #ffd700;
+    margin-bottom: 10px;
+    font-size: 36px;
+}
+
+#mode-selection p {
+    margin: 0 0 25px;
+    font-size: 20px;
+}
+
+.mode-columns {
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    gap: 28px;
+    width: min(900px, 100%);
+}
+
+.mode-panel {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    padding: 24px;
+    border: 1px solid rgba(255, 215, 0, 0.55);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.mode-panel h2 {
+    margin: 0 0 4px;
+    color: #ffd700;
+    font-size: 22px;
+}
+
+.game-mode-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: min(260px, 100%);
+}
+
+.mode-panel button,
+.mode-panel select,
+.mode-panel input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    font-size: 16px;
+}
+
+.mode-panel label {
+    align-self: flex-start;
+    font-weight: bold;
+}
+
+.mode-panel select,
+.mode-panel input {
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: white;
+    color: #111;
+}
+
+.join-room-controls,
+.join-room-controls > div {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+#network-status,
+#room-code-display {
+    min-height: 20px;
+    margin: 0;
+    font-size: 15px;
+}
+
+#room-code-display strong {
+    color: #ffd700;
+    letter-spacing: 0.15em;
+    font-size: 22px;
+}
+
+#overlay-content {
+    margin-bottom: 25px;
+    font-size: 20px;
+    line-height: 1.8;
+}
+
+button {
+    padding: 12px 30px;
+    font-size: 20px;
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    background: #ffd700;
+    color: #111;
+    font-weight: bold;
+    transition: transform 0.1s, background 0.2s;
+}
+
+button:hover {
+    background: #ffea00;
+    transform: scale(1.05);
+}
+
+button:disabled {
+    cursor: wait;
+    opacity: 0.65;
+    transform: none;
+}
+
+@media (max-width: 700px) {
+    .mode-columns {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .mode-panel {
+        padding: 18px;
+    }
+
+    #mode-selection h1 {
+        font-size: 30px;
+    }
+
+    #score-board {
+        right: 10px;
+        top: 10px;
+        padding: 7px 9px;
+        font-size: 14px;
+    }
+
+    #turn-status {
+        right: 10px;
+        top: 60px;
+        font-size: 13px;
+    }
+}

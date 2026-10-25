@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scopa Napoletana - Multiplayer</title>
+    <link rel="stylesheet" href="./scopa.css">
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script type="module" src="./js/main.js"></script>
+</head>
+<body>
+    <div id="game-board" class="is-hidden">
+        <div id="ai-captures" class="capture-pile"></div>
+        <div id="player-captures" class="capture-pile"></div>
+
+        <div id="deck-pile" class="card card-back deck-dealer-player"></div>
+        <div id="score-board"><span id="p-score-label">Tu</span>: <span id="p-score">0</span> | <span id="a-score-label">IA</span>: <span id="a-score">0</span></div>
+        <div id="turn-status" role="status" aria-live="polite"></div>
+
+        <div id="ai-hand" class="area"></div>
+        <div id="table" class="area"></div>
+        <div id="player-hand" class="area"></div>
+    </div>
+
+    <div id="capture-controls" aria-live="polite" hidden>
+        <span id="capture-instructions"></span>
+        <button id="confirm-capture-btn" type="button" disabled>Conferma presa</button>
+    </div>
+
+    <div id="mode-selection" class="game-menu">
+        <h1>Scopa Napoletana</h1>
+        <div class="mode-columns">
+            <section class="mode-panel">
+                <h2>Gioca contro il computer</h2>
+                <div class="game-mode-options">
+                    <button type="button" data-game-mode="single">Singola partita</button>
+                    <button type="button" data-game-mode="11">Fino a 11 punti</button>
+                    <button type="button" data-game-mode="21">Fino a 21 punti</button>
+                </div>
+            </section>
+            <section class="mode-panel">
+                <h2>Gioca online con un amico</h2>
+                <label for="online-mode">Durata della partita</label>
+                <select id="online-mode">
+                    <option value="11">Fino a 11 punti</option>
+                    <option value="21">Fino a 21 punti</option>
+                    <option value="single">Una smazzata</option>
+                </select>
+                <button id="create-room-btn" type="button">Crea una stanza</button>
+                <div class="join-room-controls">
+                    <label for="room-code-input">Codice stanza</label>
+                    <div>
+                        <input id="room-code-input" type="text" maxlength="6" autocomplete="off" placeholder="Es. A3K8QZ">
+                        <button id="join-room-btn" type="button">Unisciti</button>
+                    </div>
+                </div>
+                <p id="network-status" role="status" aria-live="polite"></p>
+                <p id="room-code-display" hidden>Condividi questo codice: <strong id="room-code"></strong></p>
+            </section>
+        </div>
+    </div>
+
+    <div id="overlay">
+        <h1 id="overlay-title">Fine Round</h1>
+        <div id="overlay-content"></div>
+        <button id="next-round-btn">Continua</button>
+    </div>
+</body>
+</html>
