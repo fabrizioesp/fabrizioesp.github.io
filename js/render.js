@@ -55,7 +55,7 @@ export function renderBoard(localSeat, onPlayerPlay, onTableCardSelect, onConfir
         opponentHand.appendChild(createCardElement(isRevealed ? card : null, !isRevealed));
     });
 
-    renderCaptures();
+    renderCaptures(localSeat);
 }
 
 function renderCaptureControls(onConfirmCapture) {
@@ -77,23 +77,26 @@ function renderCaptureControls(onConfirmCapture) {
     confirmButton.onclick = onConfirmCapture;
 }
 
-function renderCaptures() {
+function renderCaptures(localSeat) {
     renderCapturePile(
         'player-captures',
         game.pCaptures,
         game.sbarazzoPointsP,
-        game.scopaCardsP
+        game.scopaCardsP,
+        localSeat === 'player'
     );
     renderCapturePile(
         'ai-captures',
         game.aCaptures,
         game.sbarazzoPointsA,
-        game.scopaCardsA
+        game.scopaCardsA,
+        localSeat === 'ai'
     );
 }
 
-function renderCapturePile(elementId, captures, sbarazzoPoints, scopaCards) {
+function renderCapturePile(elementId, captures, sbarazzoPoints, scopaCards, isLocalPile) {
     const pile = document.getElementById(elementId);
+    pile.className = `capture-pile ${isLocalPile ? 'capture-pile-local' : 'capture-pile-opponent'}`;
     pile.innerHTML = '';
     if (captures.length === 0) return;
 

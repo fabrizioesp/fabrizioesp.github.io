@@ -195,12 +195,12 @@ body {
     height: 125px;
 }
 
-#ai-captures {
+.capture-pile-opponent {
     top: 20px;
     left: 20px;
 }
 
-#player-captures {
+.capture-pile-local {
     bottom: 20px;
     left: 20px;
 }
@@ -510,12 +510,12 @@ button:disabled {
         aspect-ratio: 0.64;
     }
 
-    #ai-captures {
+    .capture-pile-opponent {
         top: calc(env(safe-area-inset-top) + 8px);
         left: 8px;
     }
 
-    #player-captures {
+    .capture-pile-local {
         bottom: calc(env(safe-area-inset-bottom) + 8px);
         left: 8px;
     }
