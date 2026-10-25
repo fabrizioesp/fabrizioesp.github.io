@@ -12,9 +12,9 @@ Apri `index.html` in un browser moderno. Per giocare online, entrambi i browser 
 
 ## Partita online
 
-1. Un giocatore sceglie la durata e seleziona **Crea una stanza**.
-2. Quando la stanza è pronta, condivide il codice di sei caratteri con l'avversario.
-3. L'avversario inserisce il codice e seleziona **Unisciti**.
+1. Un giocatore sceglie la durata e seleziona **Genera codice stanza (Host)**.
+2. Il codice di sei caratteri appare subito; usa **Copia codice** per condividerlo. Attendi il messaggio che indica che la stanza è pronta.
+3. L'avversario inserisce il codice nella propria schermata e seleziona **Unisciti**.
 4. Il creatore della stanza gestisce lo stato della partita; le mosse e gli aggiornamenti viaggiano sulla connessione WebRTC diretta. PeerJS fornisce il servizio di segnalazione necessario a stabilire la connessione.
 
 Il servizio di segnalazione e la connessione peer richiedono accesso Internet. Condividi il codice solo con la persona che vuoi invitare.

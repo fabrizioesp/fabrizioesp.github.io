@@ -402,17 +402,36 @@ body {
     width: 100%;
 }
 
-#network-status,
-#room-code-display {
+#network-status {
     min-height: 20px;
     margin: 0;
     font-size: 15px;
+}
+
+#room-code-display {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+#room-code-display[hidden] {
+    display: none;
+}
+
+#room-code-display p {
+    margin: 0;
 }
 
 #room-code-display strong {
     color: #ffd700;
     letter-spacing: 0.15em;
     font-size: 22px;
+}
+
+#copy-room-code-btn {
+    padding: 8px 14px;
+    font-size: 16px;
 }
 
 #overlay-content {

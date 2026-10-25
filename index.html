@@ -61,7 +61,7 @@
                     <option value="21">Fino a 21 punti</option>
                     <option value="single">Una smazzata</option>
                 </select>
-                <button id="create-room-btn" type="button">Crea una stanza</button>
+                <button id="create-room-btn" type="button">Genera codice stanza (Host)</button>
                 <div class="join-room-controls">
                     <label for="room-code-input">Codice stanza</label>
                     <div>
@@ -70,7 +70,10 @@
                     </div>
                 </div>
                 <p id="network-status" role="status" aria-live="polite"></p>
-                <p id="room-code-display" hidden>Condividi questo codice: <strong id="room-code"></strong></p>
+                <div id="room-code-display" hidden>
+                    <p>Condividi questo codice con l’altro giocatore: <strong id="room-code"></strong></p>
+                    <button id="copy-room-code-btn" type="button">Copia codice</button>
+                </div>
             </section>
         </div>
     </div>

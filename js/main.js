@@ -24,6 +24,7 @@ document.querySelectorAll('[data-game-mode]').forEach(button => {
 
 const createRoomButton = document.getElementById('create-room-btn');
 const joinRoomButton = document.getElementById('join-room-btn');
+const copyRoomCodeButton = document.getElementById('copy-room-code-btn');
 const networkStatus = document.getElementById('network-status');
 
 function setNetworkBusy(isBusy) {
@@ -34,10 +35,7 @@ function setNetworkBusy(isBusy) {
 function networkHandlers(role) {
     return {
         onRoomReady() {
-            const roomCode = document.getElementById('room-code').textContent;
-            networkStatus.textContent = `Stanza pronta. In attesa dell'avversario...`;
-            document.getElementById('room-code-display').hidden = false;
-            document.getElementById('room-code').textContent = roomCode;
+            networkStatus.textContent = 'Stanza pronta. In attesa dell’avversario...';
         },
         onConnect() {
             networkStatus.textContent = 'Giocatore connesso. La partita sta per iniziare...';
@@ -104,22 +102,54 @@ function showMenu(message = '') {
     networkStatus.textContent = message;
     setNetworkBusy(false);
     document.getElementById('room-code-display').hidden = true;
+    document.getElementById('room-code').textContent = '';
 }
 
 createRoomButton.addEventListener('click', () => {
     networkRole = 'host';
     chosenOnlineMode = document.getElementById('online-mode').value;
     setNetworkBusy(true);
-    const roomCode = Array.from(crypto.getRandomValues(new Uint8Array(6)))
-        .map(value => 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[value % 32])
-        .join('');
+    const roomCode = generateRoomCode();
     document.getElementById('room-code').textContent = roomCode;
+    document.getElementById('room-code-display').hidden = false;
     networkStatus.textContent = 'Creazione della stanza...';
     try {
         createRoom(roomCode, networkHandlers('host'));
     } catch (error) {
         networkStatus.textContent = error.message;
         setNetworkBusy(false);
+    }
+});
+
+function generateRoomCode() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const bytes = new Uint8Array(12);
+    const characters = [];
+    while (characters.length < 6) {
+        crypto.getRandomValues(bytes);
+        for (const byte of bytes) {
+            if (byte >= 224) continue;
+            characters.push(alphabet[byte % alphabet.length]);
+            if (characters.length === 6) break;
+        }
+    }
+    return characters.join('');
+}
+
+copyRoomCodeButton.addEventListener('click', async () => {
+    const roomCode = document.getElementById('room-code').textContent.trim();
+    if (!roomCode) {
+        networkStatus.textContent = 'Genera prima un codice stanza da condividere.';
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(roomCode);
+        networkStatus.textContent = 'Codice stanza copiato.';
+    } catch (error) {
+        networkStatus.textContent =
+            `Impossibile copiare automaticamente il codice. Copialo manualmente: ${roomCode}`;
+        console.error('Copia del codice stanza non riuscita.', error);
     }
 });
 
