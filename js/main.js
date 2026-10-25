@@ -13,12 +13,17 @@ resumeAudioOnInteraction();
 
 let networkRole = null;
 let chosenOnlineMode = null;
+let chosenPlayerName = null;
 
 document.querySelectorAll('[data-game-mode]').forEach(button => {
     button.addEventListener('click', () => {
         document.getElementById('mode-selection').style.display = 'none';
         document.getElementById('game-board').classList.remove('is-hidden');
-        initGame(button.dataset.gameMode, document.getElementById('game-variant').value);
+        initGame(
+            button.dataset.gameMode,
+            document.getElementById('game-variant').value,
+            readPlayerName('Giocatore')
+        );
     });
 });
 
@@ -32,28 +37,41 @@ function setNetworkBusy(isBusy) {
     joinRoomButton.disabled = isBusy;
 }
 
+function readPlayerName(fallback) {
+    return document.getElementById('player-name-input').value.trim().slice(0, 20) || fallback;
+}
+
 function networkHandlers(role) {
+    let hostedMatchStarted = false;
     return {
         onRoomReady() {
             networkStatus.textContent = 'Stanza pronta. In attesa dell’avversario...';
         },
         onConnect() {
-            networkStatus.textContent = 'Giocatore connesso. La partita sta per iniziare...';
+            networkStatus.textContent = role === 'host'
+                ? 'Giocatore connesso. Attendo il suo nome...'
+                : 'Connesso. Invio il tuo nome all’host...';
             document.getElementById('room-code-display').hidden = true;
             document.getElementById('mode-selection').style.display = 'none';
             document.getElementById('game-board').classList.remove('is-hidden');
-            if (role === 'host') {
-                initMultiplayer(
-                    chosenOnlineMode,
-                    'player',
-                    true,
-                    document.getElementById('game-variant').value
-                );
+            if (role === 'guest' && !sendMessage({ type: 'player-name', name: chosenPlayerName })) {
+                networkStatus.textContent = 'Connessione assente: impossibile inviare il tuo nome.';
             }
         },
         onMessage(message) {
             if (!message || typeof message !== 'object') return;
-            if (message.type === 'round-start' && message.state) {
+            if (message.type === 'player-name' && role === 'host' &&
+                typeof message.name === 'string' && !hostedMatchStarted) {
+                hostedMatchStarted = true;
+                initMultiplayer(
+                    chosenOnlineMode,
+                    'player',
+                    true,
+                    document.getElementById('game-variant').value,
+                    chosenPlayerName,
+                    message.name.trim().slice(0, 20) || 'Ospite'
+                );
+            } else if (message.type === 'round-start' && message.state) {
                 applyRemoteState(message.state);
                 document.getElementById('mode-selection').style.display = 'none';
                 document.getElementById('game-board').classList.remove('is-hidden');
@@ -108,6 +126,7 @@ function showMenu(message = '') {
 createRoomButton.addEventListener('click', () => {
     networkRole = 'host';
     chosenOnlineMode = document.getElementById('online-mode').value;
+    chosenPlayerName = readPlayerName('Host');
     setNetworkBusy(true);
     const roomCode = generateRoomCode();
     document.getElementById('room-code').textContent = roomCode;
@@ -161,6 +180,7 @@ joinRoomButton.addEventListener('click', () => {
     }
 
     networkRole = 'guest';
+    chosenPlayerName = readPlayerName('Ospite');
     setNetworkBusy(true);
     networkStatus.textContent = 'Connessione alla stanza...';
     try {

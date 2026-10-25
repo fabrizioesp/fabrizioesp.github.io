@@ -12,7 +12,7 @@ const GAME_VARIANTS = ['classic', 'sbarazzo'];
 let lastShownSbarazzoAnnouncementId = null;
 let matchSequence = 0;
 
-export function initGame(mode, gameVariant) {
+export function initGame(mode, gameVariant, playerName = 'Giocatore') {
     const matchTargets = { single: null, 11: 11, 21: 21 };
     if (!Object.hasOwn(matchTargets, mode)) {
         throw new Error(`Modalità di partita non valida: ${mode}`);
@@ -32,11 +32,20 @@ export function initGame(mode, gameVariant) {
     game.matchMode = mode;
     game.matchTarget = matchTargets[mode];
     game.gameVariant = gameVariant;
+    game.playerName = playerName;
+    game.aiName = 'Computer';
     game.dealer = 'player';
     startRound();
 }
 
-export function initMultiplayer(mode, localSeat, isHost, gameVariant) {
+export function initMultiplayer(
+    mode,
+    localSeat,
+    isHost,
+    gameVariant,
+    playerName = 'Host',
+    opponentName = 'Ospite'
+) {
     const matchTargets = { single: null, 11: 11, 21: 21 };
     if (!Object.hasOwn(matchTargets, mode)) {
         throw new Error(`Modalità di partita non valida: ${mode}`);
@@ -51,6 +60,8 @@ export function initMultiplayer(mode, localSeat, isHost, gameVariant) {
     game.matchMode = mode;
     game.matchTarget = matchTargets[mode];
     game.gameVariant = gameVariant;
+    game.playerName = playerName;
+    game.aiName = opponentName;
 
     if (isHost) {
         game.globalPScore = 0;
@@ -173,8 +184,7 @@ function showSbarazzoAnnouncement(announcement) {
 
     const banner = document.getElementById('sbarazzo-announcement');
     const players = announcement.seats.map(seat => {
-        if (!game.multiplayer) return seat === 'player' ? 'Tu' : 'Computer';
-        return seat === game.localSeat ? 'Tu' : 'Avversario';
+        return getSeatName(seat);
     });
     document.getElementById('sbarazzo-announcement-player').textContent =
         players.length === 2 ? `${players[0]} e ${players[1]}` : players[0];
@@ -259,6 +269,8 @@ export function applyRemoteState(snapshot) {
         snapshot.sbarazzoRevealedHands.some(seat => seat !== 'player' && seat !== 'ai') ||
         !Number.isInteger(snapshot.sbarazzoPointsP) || snapshot.sbarazzoPointsP < 0 ||
         !Number.isInteger(snapshot.sbarazzoPointsA) || snapshot.sbarazzoPointsA < 0 ||
+        typeof snapshot.playerName !== 'string' || snapshot.playerName.length > 20 ||
+        typeof snapshot.aiName !== 'string' || snapshot.aiName.length > 20 ||
         !GAME_VARIANTS.includes(snapshot.gameVariant)) {
         return;
     }
@@ -588,8 +600,21 @@ function isValidRoundResult(result) {
 }
 
 function sideName(side) {
-    if (!game.multiplayer) return side === 'player' ? 'Tu' : 'IA';
-    return side === game.localSeat ? 'Tu' : 'Avversario';
+    return escapeHtml(getSeatName(side));
+}
+
+function getSeatName(seat) {
+    return seat === 'player' ? game.playerName : game.aiName;
+}
+
+function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, character => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    })[character]);
 }
 
 function isGameOver() {

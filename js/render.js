@@ -4,15 +4,15 @@ import { game } from './state.js';
 export function renderBoard(localSeat, onPlayerPlay, onTableCardSelect, onConfirmCapture) {
     document.getElementById('p-score').innerText = game.globalPScore;
     document.getElementById('a-score').innerText = game.globalAScore;
-    document.getElementById('p-score-label').innerText = game.multiplayer ? (localSeat === 'player' ? 'Tu' : 'Avversario') : 'Tu';
-    document.getElementById('a-score-label').innerText = game.multiplayer ? (localSeat === 'ai' ? 'Tu' : 'Avversario') : 'IA';
+    document.getElementById('p-score-label').innerText = game.playerName;
+    document.getElementById('a-score-label').innerText = game.aiName;
     const deckPile = document.getElementById('deck-pile');
     deckPile.className = `card card-back ${game.dealer === localSeat ? 'deck-dealer-local' : 'deck-dealer-opponent'}`;
     deckPile.style.display = game.deck.length === 0 ? 'none' : 'block';
     const turnStatus = document.getElementById('turn-status');
     turnStatus.textContent = game.isLocked
         ? (game.captureChoice ? 'Scegli la presa' : 'Giocata in corso...')
-        : game.turn === localSeat ? 'Tocca a te' : game.multiplayer ? 'Tocca all’avversario' : 'Turno IA';
+        : `Tocca a ${game.turn === 'player' ? game.playerName : game.aiName}`;
     document.getElementById('game-variant-status').textContent =
         game.gameVariant === 'sbarazzo' ? 'Sbarazzo Federiciano' : 'Scopa classica';
 

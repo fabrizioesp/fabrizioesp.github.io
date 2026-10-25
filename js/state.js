@@ -33,6 +33,8 @@ export const game = {
     matchTarget: null,
     gameVariant: 'classic',
     matchId: null,
+    playerName: 'Giocatore',
+    aiName: 'Computer',
     dealer: 'player',
     turn: 'ai',
     lastCapture: null,

@@ -330,6 +330,27 @@ body {
     text-align: left;
 }
 
+.player-name-control {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: min(360px, 100%);
+    margin-bottom: 18px;
+    text-align: left;
+    font-weight: bold;
+}
+
+.player-name-control input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: white;
+    color: #111;
+    font: inherit;
+}
+
 .game-variant-control label {
     font-weight: bold;
 }
