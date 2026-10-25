@@ -12,8 +12,9 @@ import { createRoom, disconnectNetwork, joinRoom, sendMessage } from './network.
 resumeAudioOnInteraction();
 
 let networkRole = null;
-let chosenOnlineMode = null;
 let chosenPlayerName = null;
+let opponentPlayerName = null;
+let hostPlayerConnected = false;
 
 document.querySelectorAll('[data-game-mode]').forEach(button => {
     button.addEventListener('click', () => {
@@ -31,6 +32,12 @@ const createRoomButton = document.getElementById('create-room-btn');
 const joinRoomButton = document.getElementById('join-room-btn');
 const copyRoomCodeButton = document.getElementById('copy-room-code-btn');
 const networkStatus = document.getElementById('network-status');
+const lobby = document.getElementById('multiplayer-lobby');
+const lobbyStatus = document.getElementById('lobby-status');
+const lobbyStartButton = document.getElementById('lobby-start-btn');
+const lobbyCancelButton = document.getElementById('lobby-cancel-btn');
+const lobbyVariant = document.getElementById('lobby-game-variant');
+const lobbyDuration = document.getElementById('lobby-game-duration');
 
 function setNetworkBusy(isBusy) {
     createRoomButton.disabled = isBusy;
@@ -41,42 +48,81 @@ function readPlayerName(fallback) {
     return document.getElementById('player-name-input').value.trim().slice(0, 20) || fallback;
 }
 
+function showLobby(role) {
+    document.getElementById('mode-selection').style.display = 'none';
+    document.getElementById('game-board').classList.add('is-hidden');
+    lobby.hidden = false;
+    const isHost = role === 'host';
+    document.getElementById('lobby-host-settings').hidden = !isHost;
+    document.getElementById('lobby-guest-settings').hidden = isHost;
+    document.querySelector('.lobby-room-code').hidden = !isHost;
+    copyRoomCodeButton.hidden = !isHost;
+    lobbyStartButton.hidden = !isHost;
+    lobbyStartButton.disabled = !isHost || !hostPlayerConnected;
+}
+
+function sendLobbySettings() {
+    if (networkRole !== 'host') return;
+    sendMessage({
+        type: 'lobby-settings',
+        variant: lobbyVariant.value,
+        duration: lobbyDuration.value
+    });
+}
+
+function updateGuestLobby(settings) {
+    const variants = {
+        classic: 'Scopa classica',
+        sbarazzo: 'Sbarazzo Federiciano'
+    };
+    const durations = {
+        11: 'Fino a 11 punti',
+        21: 'Fino a 21 punti',
+        single: 'Una smazzata'
+    };
+    if (!Object.hasOwn(variants, settings.variant) || !Object.hasOwn(durations, settings.duration)) {
+        return;
+    }
+    document.getElementById('lobby-guest-variant').textContent = variants[settings.variant];
+    document.getElementById('lobby-guest-duration').textContent = durations[settings.duration];
+    lobbyStatus.textContent = 'In attesa che l’host avvii la partita...';
+}
+
 function networkHandlers(role) {
-    let hostedMatchStarted = false;
     return {
         onRoomReady() {
-            networkStatus.textContent = 'Stanza pronta. In attesa dell’avversario...';
+            lobbyStatus.textContent = 'Stanza pronta. In attesa dell’altro giocatore...';
+            sendLobbySettings();
         },
         onConnect() {
-            networkStatus.textContent = role === 'host'
-                ? 'Giocatore connesso. Attendo il suo nome...'
-                : 'Connesso. Invio il tuo nome all’host...';
-            document.getElementById('room-code-display').hidden = true;
-            document.getElementById('mode-selection').style.display = 'none';
-            document.getElementById('game-board').classList.remove('is-hidden');
-            if (role === 'guest' && !sendMessage({ type: 'player-name', name: chosenPlayerName })) {
-                networkStatus.textContent = 'Connessione assente: impossibile inviare il tuo nome.';
+            showLobby(role);
+            if (role === 'host') {
+                hostPlayerConnected = true;
+                lobbyStatus.textContent = 'Giocatore collegato. In attesa del suo nome...';
+                lobbyStartButton.disabled = !opponentPlayerName;
+                sendLobbySettings();
+            } else {
+                lobbyStatus.textContent = 'Connesso. Invio il tuo nome all’host...';
+                if (!sendMessage({ type: 'player-name', name: chosenPlayerName })) {
+                    lobbyStatus.textContent = 'Connessione assente: impossibile inviare il nome.';
+                }
             }
         },
         onMessage(message) {
             if (!message || typeof message !== 'object') return;
             if (message.type === 'player-name' && role === 'host' &&
-                typeof message.name === 'string' && !hostedMatchStarted) {
-                hostedMatchStarted = true;
-                initMultiplayer(
-                    chosenOnlineMode,
-                    'player',
-                    true,
-                    document.getElementById('game-variant').value,
-                    chosenPlayerName,
-                    message.name.trim().slice(0, 20) || 'Ospite'
-                );
+                typeof message.name === 'string') {
+                opponentPlayerName = message.name.trim().slice(0, 20) || 'Ospite';
+                lobbyStatus.textContent = `${opponentPlayerName} è nella lobby. Scegli le impostazioni e avvia la partita.`;
+                lobbyStartButton.disabled = !hostPlayerConnected;
+            } else if (message.type === 'lobby-settings' && role === 'guest') {
+                updateGuestLobby(message);
             } else if (message.type === 'round-start' && message.state) {
                 applyRemoteState(message.state);
-                document.getElementById('mode-selection').style.display = 'none';
+                lobby.hidden = true;
                 document.getElementById('game-board').classList.remove('is-hidden');
                 document.getElementById('overlay').style.display = 'none';
-                networkStatus.textContent = 'Partita online in corso.';
+                lobbyStatus.textContent = 'Partita online in corso.';
             } else if (message.type === 'state' && role === 'guest' && message.state) {
                 applyRemoteState(message.state);
             } else if (message.type === 'play' && role === 'host') {
@@ -96,7 +142,11 @@ function networkHandlers(role) {
         onDisconnect() {
             if (networkRole) {
                 networkRole = null;
-                if (!document.getElementById('game-board').classList.contains('is-hidden')) {
+                if (!lobby.hidden) {
+                    hostPlayerConnected = false;
+                    lobbyStartButton.disabled = true;
+                    lobbyStatus.textContent = 'Connessione interrotta. La lobby non è più disponibile.';
+                } else if (!document.getElementById('game-board').classList.contains('is-hidden')) {
                     document.getElementById('turn-status').textContent =
                         'Connessione interrotta. Ricarica la pagina per avviare una nuova partita.';
                 } else {
@@ -105,7 +155,10 @@ function networkHandlers(role) {
             }
         },
         onError(message) {
-            networkStatus.textContent = message;
+            if (!lobby.hidden) lobbyStatus.textContent = message;
+            else networkStatus.textContent = message;
+            hostPlayerConnected = false;
+            lobbyStartButton.disabled = true;
             networkRole = null;
             disconnectNetwork();
             setNetworkBusy(false);
@@ -119,18 +172,23 @@ function showMenu(message = '') {
     document.getElementById('mode-selection').style.display = 'flex';
     networkStatus.textContent = message;
     setNetworkBusy(false);
-    document.getElementById('room-code-display').hidden = true;
+    lobby.hidden = true;
     document.getElementById('room-code').textContent = '';
+    hostPlayerConnected = false;
+    opponentPlayerName = null;
 }
 
 createRoomButton.addEventListener('click', () => {
     networkRole = 'host';
-    chosenOnlineMode = document.getElementById('online-mode').value;
     chosenPlayerName = readPlayerName('Host');
+    hostPlayerConnected = false;
+    opponentPlayerName = null;
+    lobbyVariant.value = document.getElementById('game-variant').value;
+    lobbyStatus.textContent = 'Creazione della stanza...';
     setNetworkBusy(true);
     const roomCode = generateRoomCode();
     document.getElementById('room-code').textContent = roomCode;
-    document.getElementById('room-code-display').hidden = false;
+    showLobby('host');
     networkStatus.textContent = 'Creazione della stanza...';
     try {
         createRoom(roomCode, networkHandlers('host'));
@@ -138,6 +196,37 @@ createRoomButton.addEventListener('click', () => {
         networkStatus.textContent = error.message;
         setNetworkBusy(false);
     }
+});
+
+for (const control of [lobbyVariant, lobbyDuration]) {
+    control.addEventListener('change', sendLobbySettings);
+}
+
+lobbyStartButton.addEventListener('click', () => {
+    if (networkRole !== 'host' || !hostPlayerConnected || !opponentPlayerName) return;
+    lobbyStartButton.disabled = true;
+    lobbyStatus.textContent = 'Avvio della partita...';
+    try {
+        initMultiplayer(
+            lobbyDuration.value,
+            'player',
+            true,
+            lobbyVariant.value,
+            chosenPlayerName,
+            opponentPlayerName
+        );
+        lobby.hidden = true;
+        document.getElementById('game-board').classList.remove('is-hidden');
+    } catch (error) {
+        lobbyStatus.textContent = error.message;
+        lobbyStartButton.disabled = false;
+    }
+});
+
+lobbyCancelButton.addEventListener('click', () => {
+    disconnectNetwork();
+    networkRole = null;
+    showMenu('Lobby chiusa.');
 });
 
 function generateRoomCode() {
@@ -158,15 +247,15 @@ function generateRoomCode() {
 copyRoomCodeButton.addEventListener('click', async () => {
     const roomCode = document.getElementById('room-code').textContent.trim();
     if (!roomCode) {
-        networkStatus.textContent = 'Genera prima un codice stanza da condividere.';
+        lobbyStatus.textContent = 'Codice stanza non disponibile.';
         return;
     }
 
     try {
         await navigator.clipboard.writeText(roomCode);
-        networkStatus.textContent = 'Codice stanza copiato.';
+        lobbyStatus.textContent = 'Codice stanza copiato.';
     } catch (error) {
-        networkStatus.textContent =
+        lobbyStatus.textContent =
             `Impossibile copiare automaticamente il codice. Copialo manualmente: ${roomCode}`;
         console.error('Copia del codice stanza non riuscita.', error);
     }
@@ -181,6 +270,7 @@ joinRoomButton.addEventListener('click', () => {
 
     networkRole = 'guest';
     chosenPlayerName = readPlayerName('Ospite');
+    lobbyStatus.textContent = 'Connessione alla stanza...';
     setNetworkBusy(true);
     networkStatus.textContent = 'Connessione alla stanza...';
     try {
