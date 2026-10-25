@@ -83,9 +83,6 @@ function startRound() {
     game.sbarazzoAnnouncement = null;
     game.isLocked = false;
 
-    document.getElementById('deck-pile').className =
-        `card card-back ${game.dealer === 'player' ? 'deck-dealer-player' : 'deck-dealer-ai'}`;
-
     for (const suit of suits) {
         for (const value of values) {
             game.deck.push({ id: `${value}-${suit}`, value, suit });

@@ -230,12 +230,12 @@ body {
     z-index: 10;
 }
 
-.deck-dealer-ai {
-    top: 20px;
+.deck-dealer-opponent {
+    top: 155px;
     bottom: auto;
 }
 
-.deck-dealer-player {
+.deck-dealer-local {
     bottom: 20px;
     top: auto;
 }
@@ -524,11 +524,11 @@ button:disabled {
         right: 8px;
     }
 
-    .deck-dealer-ai {
-        top: calc(env(safe-area-inset-top) + 8px);
+    .deck-dealer-opponent {
+        top: calc(env(safe-area-inset-top) + 100px);
     }
 
-    .deck-dealer-player {
+    .deck-dealer-local {
         bottom: calc(env(safe-area-inset-bottom) + 8px);
     }
 

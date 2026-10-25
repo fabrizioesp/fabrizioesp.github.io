@@ -7,7 +7,7 @@ export function renderBoard(localSeat, onPlayerPlay, onTableCardSelect, onConfir
     document.getElementById('p-score-label').innerText = game.multiplayer ? (localSeat === 'player' ? 'Tu' : 'Avversario') : 'Tu';
     document.getElementById('a-score-label').innerText = game.multiplayer ? (localSeat === 'ai' ? 'Tu' : 'Avversario') : 'IA';
     const deckPile = document.getElementById('deck-pile');
-    deckPile.className = `card card-back ${game.dealer === 'player' ? 'deck-dealer-player' : 'deck-dealer-ai'}`;
+    deckPile.className = `card card-back ${game.dealer === localSeat ? 'deck-dealer-local' : 'deck-dealer-opponent'}`;
     deckPile.style.display = game.deck.length === 0 ? 'none' : 'block';
     const turnStatus = document.getElementById('turn-status');
     turnStatus.textContent = game.isLocked
