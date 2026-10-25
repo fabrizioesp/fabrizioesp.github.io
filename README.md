@@ -4,7 +4,7 @@ La cartella contiene una versione autonoma del gioco con partita singola, partit
 
 ## Avvio
 
-Apri `scopa.html` in un browser moderno. Per giocare online, entrambi i browser devono essere connessi a Internet e la pagina deve essere servita da `localhost` o da un sito HTTPS, perché WebRTC richiede un contesto sicuro.
+Apri `index.html` in un browser moderno. Per giocare online, entrambi i browser devono essere connessi a Internet e la pagina deve essere servita da `localhost` o da un sito HTTPS, perché WebRTC richiede un contesto sicuro.
 
 ## Partita online
 
