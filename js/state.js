@@ -46,5 +46,6 @@ export const game = {
     isLocked: false,
     multiplayer: false,
     multiplayerHost: false,
+    remotePlayerConnected: true,
     localSeat: 'player'
 };

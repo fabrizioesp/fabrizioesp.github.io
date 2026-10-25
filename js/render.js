@@ -12,7 +12,10 @@ export function renderBoard(localSeat, onPlayerPlay, onTableCardSelect, onConfir
     const turnStatus = document.getElementById('turn-status');
     turnStatus.textContent = game.isLocked
         ? (game.captureChoice ? 'Scegli la presa' : 'Giocata in corso...')
+        : game.multiplayerHost && !game.remotePlayerConnected
+            ? 'Avversario disconnesso - partita in pausa'
         : `Tocca a ${game.turn === 'player' ? game.playerName : game.aiName}`;
+    document.getElementById('room-session-menu').hidden = !game.multiplayer;
     document.getElementById('game-variant-status').textContent =
         game.gameVariant === 'sbarazzo' ? 'Sbarazzo Federiciano' : 'Scopa classica';
 

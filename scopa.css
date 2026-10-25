@@ -177,12 +177,11 @@ body {
 }
 
 .card-back {
-    background-color: #0044cc;
-    background-image:
-        repeating-linear-gradient(45deg, #0044cc 25%, transparent 25%, transparent 75%, #0044cc 75%, #0044cc),
-        repeating-linear-gradient(45deg, #0044cc 25%, #ffffff 25%, #ffffff 75%, #0044cc 75%, #0044cc);
-    background-position: 0 0, 10px 10px;
-    background-size: 20px 20px;
+    background-color: white;
+    background-image: url("./assets/img/Carte_Napoletane_retro.jpg");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
 }
 
 .card-back img {
@@ -272,6 +271,42 @@ body {
     background: rgba(0, 0, 0, 0.55);
     font-size: 14px;
     font-weight: bold;
+}
+
+#room-session-menu {
+    position: absolute;
+    top: 155px;
+    right: 20px;
+    z-index: 20;
+    max-width: min(280px, calc(100vw - 40px));
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 215, 0, 0.75);
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.82);
+    font-size: 14px;
+}
+
+#room-session-menu[hidden] {
+    display: none;
+}
+
+#room-session-menu summary {
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#room-session-menu p {
+    margin: 10px 0;
+}
+
+#room-session-menu strong {
+    color: #ffd700;
+    letter-spacing: 0.12em;
+}
+
+#copy-active-room-code-btn {
+    padding: 7px 10px;
+    font-size: 14px;
 }
 
 #overlay,
@@ -632,6 +667,12 @@ button:disabled {
 
     #deck-pile {
         right: 8px;
+    }
+
+    #room-session-menu {
+        top: calc(env(safe-area-inset-top) + 155px);
+        right: 8px;
+        max-width: min(220px, calc(100vw - 16px));
     }
 
     .deck-dealer-opponent {

@@ -5,6 +5,8 @@ import {
     initMultiplayer,
     receiveRemoteCapture,
     receiveRemotePlay,
+    sendResumeState,
+    setRemotePlayerConnected,
     showRemoteRoundResult
 } from './game.js';
 import { createRoom, disconnectNetwork, joinRoom, sendMessage } from './network.js';
@@ -15,9 +17,15 @@ let networkRole = null;
 let chosenPlayerName = null;
 let opponentPlayerName = null;
 let hostPlayerConnected = false;
+let hostedMatchStarted = false;
+let activeRoomCode = '';
+const ROOM_SESSION_STORAGE_KEY = 'scopa.multiplayer.session';
 
 document.querySelectorAll('[data-game-mode]').forEach(button => {
     button.addEventListener('click', () => {
+        clearSavedGuestSession();
+        setActiveRoomCode('');
+        joinRoomButton.textContent = 'Unisciti';
         document.getElementById('mode-selection').style.display = 'none';
         document.getElementById('game-board').classList.remove('is-hidden');
         initGame(
@@ -38,6 +46,37 @@ const lobbyStartButton = document.getElementById('lobby-start-btn');
 const lobbyCancelButton = document.getElementById('lobby-cancel-btn');
 const lobbyVariant = document.getElementById('lobby-game-variant');
 const lobbyDuration = document.getElementById('lobby-game-duration');
+const copyActiveRoomCodeButton = document.getElementById('copy-active-room-code-btn');
+
+try {
+    const savedSession = JSON.parse(localStorage.getItem(ROOM_SESSION_STORAGE_KEY) || 'null');
+    if (savedSession?.role === 'guest' &&
+        typeof savedSession.roomCode === 'string' &&
+        /^[A-HJ-NP-Z2-9]{6}$/.test(savedSession.roomCode)) {
+        activeRoomCode = savedSession.roomCode;
+        document.getElementById('room-code-input').value = activeRoomCode;
+        document.getElementById('join-room-btn').textContent = 'Rientra nella partita';
+        if (typeof savedSession.playerName === 'string') {
+            document.getElementById('player-name-input').value =
+                savedSession.playerName.trim().slice(0, 20);
+        }
+    }
+} catch (error) {
+    console.warn('Impossibile ripristinare i dati per rientrare nella stanza.', error);
+}
+
+function setActiveRoomCode(roomCode) {
+    activeRoomCode = roomCode;
+    document.getElementById('active-room-code').textContent = roomCode;
+}
+
+function clearSavedGuestSession() {
+    try {
+        localStorage.removeItem(ROOM_SESSION_STORAGE_KEY);
+    } catch (error) {
+        console.warn('Impossibile cancellare i dati salvati della stanza.', error);
+    }
+}
 
 function setNetworkBusy(isBusy) {
     createRoomButton.disabled = isBusy;
@@ -95,6 +134,10 @@ function networkHandlers(role) {
             sendLobbySettings();
         },
         onConnect() {
+            if (role === 'host' && hostedMatchStarted) {
+                lobbyStatus.textContent = 'Ospite riconnesso. Ripristino la partita...';
+                return;
+            }
             showLobby(role);
             if (role === 'host') {
                 hostPlayerConnected = true;
@@ -113,6 +156,11 @@ function networkHandlers(role) {
             if (message.type === 'player-name' && role === 'host' &&
                 typeof message.name === 'string') {
                 opponentPlayerName = message.name.trim().slice(0, 20) || 'Ospite';
+                if (hostedMatchStarted) {
+                    setRemotePlayerConnected(true);
+                    sendResumeState();
+                    return;
+                }
                 lobbyStatus.textContent = `${opponentPlayerName} è nella lobby. Scegli le impostazioni e avvia la partita.`;
                 lobbyStartButton.disabled = !hostPlayerConnected;
             } else if (message.type === 'lobby-settings' && role === 'guest') {
@@ -123,6 +171,11 @@ function networkHandlers(role) {
                 document.getElementById('game-board').classList.remove('is-hidden');
                 document.getElementById('overlay').style.display = 'none';
                 lobbyStatus.textContent = 'Partita online in corso.';
+            } else if (message.type === 'resume-state' && role === 'guest' && message.state) {
+                applyRemoteState(message.state);
+                lobby.hidden = true;
+                document.getElementById('game-board').classList.remove('is-hidden');
+                lobbyStatus.textContent = 'Partita ripristinata.';
             } else if (message.type === 'state' && role === 'guest' && message.state) {
                 applyRemoteState(message.state);
             } else if (message.type === 'play' && role === 'host') {
@@ -136,13 +189,15 @@ function networkHandlers(role) {
             } else if (message.type === 'session-ended' && role === 'guest') {
                 disconnectNetwork();
                 networkRole = null;
+                clearSavedGuestSession();
                 showMenu('L’avversario ha terminato la partita.');
             }
         },
         onDisconnect() {
             if (networkRole) {
-                networkRole = null;
-                if (!lobby.hidden) {
+                if (role === 'host' && hostedMatchStarted) {
+                    setRemotePlayerConnected(false);
+                } else if (!lobby.hidden) {
                     hostPlayerConnected = false;
                     lobbyStartButton.disabled = true;
                     lobbyStatus.textContent = 'Connessione interrotta. La lobby non è più disponibile.';
@@ -158,6 +213,7 @@ function networkHandlers(role) {
             if (!lobby.hidden) lobbyStatus.textContent = message;
             else networkStatus.textContent = message;
             hostPlayerConnected = false;
+            hostedMatchStarted = false;
             lobbyStartButton.disabled = true;
             networkRole = null;
             disconnectNetwork();
@@ -176,18 +232,23 @@ function showMenu(message = '') {
     document.getElementById('room-code').textContent = '';
     hostPlayerConnected = false;
     opponentPlayerName = null;
+    hostedMatchStarted = false;
+    setActiveRoomCode('');
 }
 
 createRoomButton.addEventListener('click', () => {
     networkRole = 'host';
+    clearSavedGuestSession();
     chosenPlayerName = readPlayerName('Host');
     hostPlayerConnected = false;
+    hostedMatchStarted = false;
     opponentPlayerName = null;
     lobbyVariant.value = document.getElementById('game-variant').value;
     lobbyStatus.textContent = 'Creazione della stanza...';
     setNetworkBusy(true);
     const roomCode = generateRoomCode();
     document.getElementById('room-code').textContent = roomCode;
+    setActiveRoomCode(roomCode);
     showLobby('host');
     networkStatus.textContent = 'Creazione della stanza...';
     try {
@@ -215,8 +276,10 @@ lobbyStartButton.addEventListener('click', () => {
             chosenPlayerName,
             opponentPlayerName
         );
+        hostedMatchStarted = true;
         lobby.hidden = true;
         document.getElementById('game-board').classList.remove('is-hidden');
+        setRemotePlayerConnected(true);
     } catch (error) {
         lobbyStatus.textContent = error.message;
         lobbyStartButton.disabled = false;
@@ -226,6 +289,7 @@ lobbyStartButton.addEventListener('click', () => {
 lobbyCancelButton.addEventListener('click', () => {
     disconnectNetwork();
     networkRole = null;
+    clearSavedGuestSession();
     showMenu('Lobby chiusa.');
 });
 
@@ -270,6 +334,16 @@ joinRoomButton.addEventListener('click', () => {
 
     networkRole = 'guest';
     chosenPlayerName = readPlayerName('Ospite');
+    setActiveRoomCode(roomCode);
+    try {
+        localStorage.setItem(ROOM_SESSION_STORAGE_KEY, JSON.stringify({
+            role: 'guest',
+            roomCode,
+            playerName: chosenPlayerName
+        }));
+    } catch (error) {
+        console.warn('Impossibile salvare i dati per rientrare nella stanza.', error);
+    }
     lobbyStatus.textContent = 'Connessione alla stanza...';
     setNetworkBusy(true);
     networkStatus.textContent = 'Connessione alla stanza...';
@@ -278,5 +352,21 @@ joinRoomButton.addEventListener('click', () => {
     } catch (error) {
         networkStatus.textContent = error.message;
         setNetworkBusy(false);
+    }
+});
+
+copyActiveRoomCodeButton.addEventListener('click', async () => {
+    if (!activeRoomCode) {
+        document.getElementById('turn-status').textContent = 'Codice stanza non disponibile.';
+        return;
+    }
+
+    try {
+        await navigator.clipboard.writeText(activeRoomCode);
+        document.getElementById('turn-status').textContent = 'Codice stanza copiato.';
+    } catch (error) {
+        document.getElementById('turn-status').textContent =
+            `Impossibile copiare. Codice stanza: ${activeRoomCode}`;
+        console.error('Copia del codice stanza non riuscita.', error);
     }
 });

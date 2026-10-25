@@ -18,3 +18,5 @@ Apri `index.html` in un browser moderno. Per giocare online, entrambi i browser 
 4. Quando l'avversario è collegato, l'host seleziona **Avvia partita**. Solo l'host decide la modalità e la durata; poi gestisce lo stato della partita. Le mosse e gli aggiornamenti viaggiano sulla connessione WebRTC diretta. PeerJS fornisce il servizio di segnalazione necessario a stabilire la connessione.
 
 Il servizio di segnalazione e la connessione peer richiedono accesso Internet. Condividi il codice solo con la persona che vuoi invitare.
+
+Durante la partita, il menu **Stanza multiplayer** mostra il codice stanza da condividere in caso di disconnessione. Sul browser dell'ospite, codice e nome vengono salvati per facilitare il rientro dopo un ricaricamento: inserisci nuovamente il codice precompilato e seleziona **Rientra nella partita**. Se l'host è ancora nella partita, lo stato corrente viene ripristinato e il gioco riprende; mentre l'ospite è disconnesso, l'host vede la partita in pausa.

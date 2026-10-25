@@ -25,6 +25,7 @@ export function initGame(mode, gameVariant, playerName = 'Giocatore') {
     game.globalAScore = 0;
     game.multiplayer = false;
     game.multiplayerHost = false;
+    game.remotePlayerConnected = true;
     game.localSeat = 'player';
     game.handDealNumber = 0;
     game.matchId = createMatchId();
@@ -56,6 +57,7 @@ export function initMultiplayer(
 
     game.multiplayer = true;
     game.multiplayerHost = isHost;
+    game.remotePlayerConnected = true;
     game.localSeat = localSeat;
     game.matchMode = mode;
     game.matchTarget = matchTargets[mode];
@@ -207,7 +209,8 @@ async function finishSbarazzoAnnouncement(announcement) {
 }
 
 export function playerPlay(cardIndex) {
-    if (game.isLocked || game.turn !== game.localSeat) return;
+    if (game.isLocked || game.turn !== game.localSeat ||
+        (game.multiplayerHost && !game.remotePlayerConnected)) return;
     if (game.multiplayer && !game.multiplayerHost) {
         if (!sendMessage({ type: 'play', index: cardIndex })) {
             document.getElementById('turn-status').textContent = 'Connessione assente: impossibile inviare la mossa.';
@@ -221,7 +224,8 @@ export function playerPlay(cardIndex) {
 }
 
 export function receiveRemotePlay(cardIndex) {
-    if (!game.multiplayerHost || game.turn !== 'ai' || game.isLocked ||
+    if (!game.multiplayerHost || !game.remotePlayerConnected ||
+        game.turn !== 'ai' || game.isLocked ||
         !Number.isInteger(cardIndex) || cardIndex < 0 || cardIndex >= game.aHand.length) {
         document.getElementById('turn-status').textContent = 'Mossa non valida o fuori turno.';
         return;
@@ -279,6 +283,18 @@ export function applyRemoteState(snapshot) {
     renderBoard(game.localSeat, playerPlay, selectCaptureCard, confirmCaptureChoice);
 }
 
+export function setRemotePlayerConnected(isConnected) {
+    if (!game.multiplayerHost) return;
+    game.remotePlayerConnected = isConnected;
+    renderGameBoard();
+}
+
+export function sendResumeState() {
+    if (game.multiplayerHost) {
+        sendMessage({ type: 'resume-state', state: getSnapshot() });
+    }
+}
+
 function selectCaptureCard(cardId) {
     const choice = game.captureChoice;
     if (!choice || !choice.availableCardIds.includes(cardId)) return;
@@ -301,7 +317,7 @@ function selectCaptureCard(cardId) {
 
 function confirmCaptureChoice() {
     const choice = game.captureChoice;
-    if (!choice) return;
+    if (!choice || (game.multiplayerHost && !game.remotePlayerConnected)) return;
 
     const selectedCards = game.tableCards.filter(card =>
         choice.selectedIds.includes(card.id)
@@ -324,7 +340,8 @@ function confirmCaptureChoice() {
 
 export function receiveRemoteCapture(selectedIds) {
     const choice = game.captureChoice;
-    if (!game.multiplayerHost || !choice || !Array.isArray(selectedIds) ||
+    if (!game.multiplayerHost || !game.remotePlayerConnected ||
+        !choice || !Array.isArray(selectedIds) ||
         selectedIds.some(id => !choice.availableCardIds.includes(id))) {
         return;
     }

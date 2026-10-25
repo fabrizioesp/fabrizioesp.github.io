@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scopa Napoletana - Multiplayer</title>
+    <title>Scopa e Sbarazzo Napoletano - Multiplayer</title>
     <link rel="stylesheet" href="./scopa.css">
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
     <script type="module" src="./js/main.js"></script>
@@ -17,6 +17,11 @@
         <div id="score-board"><span id="p-score-label">Tu</span>: <span id="p-score">0</span> | <span id="a-score-label">IA</span>: <span id="a-score">0</span></div>
         <div id="turn-status" role="status" aria-live="polite"></div>
         <div id="game-variant-status" role="status"></div>
+        <details id="room-session-menu" hidden>
+            <summary>Stanza multiplayer</summary>
+            <p>Codice per rientrare: <strong id="active-room-code"></strong></p>
+            <button id="copy-active-room-code-btn" type="button">Copia codice stanza</button>
+        </details>
 
         <div id="ai-hand" class="area"></div>
         <div id="table" class="area"></div>
@@ -36,7 +41,7 @@
     </div>
 
     <div id="mode-selection" class="game-menu">
-        <h1>Scopa Napoletana</h1>
+        <h1>Scopa e Sbarazzo Napoletano</h1>
         <div class="player-name-control">
             <label for="player-name-input">Il tuo nome</label>
             <input id="player-name-input" type="text" maxlength="20" autocomplete="nickname" placeholder="Inserisci il tuo nome">
