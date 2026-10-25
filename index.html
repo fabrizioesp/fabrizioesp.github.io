@@ -16,6 +16,7 @@
         <div id="deck-pile" class="card card-back deck-dealer-player"></div>
         <div id="score-board"><span id="p-score-label">Tu</span>: <span id="p-score">0</span> | <span id="a-score-label">IA</span>: <span id="a-score">0</span></div>
         <div id="turn-status" role="status" aria-live="polite"></div>
+        <div id="game-variant-status" role="status"></div>
 
         <div id="ai-hand" class="area"></div>
         <div id="table" class="area"></div>
@@ -27,8 +28,22 @@
         <button id="confirm-capture-btn" type="button" disabled>Conferma presa</button>
     </div>
 
+    <div id="sbarazzo-announcement" role="alert" aria-live="assertive" hidden>
+        <div>
+            <strong>SBARAZZO</strong>
+            <span id="sbarazzo-announcement-player"></span>
+        </div>
+    </div>
+
     <div id="mode-selection" class="game-menu">
         <h1>Scopa Napoletana</h1>
+        <div class="game-variant-control">
+            <label for="game-variant">Modalità di gioco</label>
+            <select id="game-variant">
+                <option value="classic">Scopa classica</option>
+                <option value="sbarazzo">Sbarazzo Federiciano</option>
+            </select>
+        </div>
         <div class="mode-columns">
             <section class="mode-panel">
                 <h2>Gioca contro il computer</h2>

@@ -82,6 +82,53 @@ body {
     display: none;
 }
 
+#sbarazzo-announcement {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.88);
+    text-align: center;
+}
+
+#sbarazzo-announcement[hidden] {
+    display: none;
+}
+
+#sbarazzo-announcement > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    animation: sbarazzo-entrance 0.45s ease-out both;
+}
+
+#sbarazzo-announcement strong {
+    color: #ffd700;
+    font-size: clamp(52px, 14vw, 120px);
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 28px rgba(255, 215, 0, 0.55);
+}
+
+#sbarazzo-announcement span {
+    font-size: clamp(18px, 5vw, 30px);
+    font-weight: bold;
+}
+
+@keyframes sbarazzo-entrance {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 #capture-controls button {
     padding: 8px 14px;
     font-size: 16px;
@@ -171,6 +218,11 @@ body {
     overflow: hidden;
 }
 
+.sbarazzo-point-card {
+    border: 2px solid #ffd700;
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+}
+
 #deck-pile {
     position: absolute;
     right: 20px;
@@ -207,6 +259,18 @@ body {
     padding: 7px 10px;
     border-radius: 6px;
     background: rgba(0, 0, 0, 0.55);
+    font-weight: bold;
+}
+
+#game-variant-status {
+    position: absolute;
+    top: 110px;
+    right: 20px;
+    padding: 6px 9px;
+    border: 1px solid rgba(255, 215, 0, 0.7);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.55);
+    font-size: 14px;
     font-weight: bold;
 }
 
@@ -254,6 +318,32 @@ body {
     align-items: stretch;
     gap: 28px;
     width: min(900px, 100%);
+}
+
+.game-variant-control {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    width: min(420px, 100%);
+    margin: 0 0 22px;
+    text-align: left;
+}
+
+.game-variant-control label {
+    font-weight: bold;
+}
+
+.game-variant-control select {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 48px;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background: white;
+    color: #111;
+    font-size: 16px;
 }
 
 .mode-panel {
@@ -375,7 +465,7 @@ button:disabled {
     }
 
     #ai-hand {
-        transform: translateY(clamp(52px, 12vh, 76px));
+        transform: translateY(clamp(80px, 16vh, 100px));
     }
 
     .card,
@@ -445,6 +535,15 @@ button:disabled {
         transform: translateX(50%);
         padding: 5px 8px;
         font-size: clamp(11px, 3vw, 13px);
+        white-space: nowrap;
+    }
+
+    #game-variant-status {
+        top: calc(env(safe-area-inset-top) + 78px);
+        right: 50%;
+        transform: translateX(50%);
+        padding: 4px 7px;
+        font-size: clamp(10px, 2.8vw, 12px);
         white-space: nowrap;
     }
 
@@ -546,6 +645,10 @@ button:disabled {
 
 @media (prefers-reduced-motion: reduce) {
     #table .card.capture-pending {
+        animation: none;
+    }
+
+    #sbarazzo-announcement > div {
         animation: none;
     }
 }

@@ -18,7 +18,7 @@ document.querySelectorAll('[data-game-mode]').forEach(button => {
     button.addEventListener('click', () => {
         document.getElementById('mode-selection').style.display = 'none';
         document.getElementById('game-board').classList.remove('is-hidden');
-        initGame(button.dataset.gameMode);
+        initGame(button.dataset.gameMode, document.getElementById('game-variant').value);
     });
 });
 
@@ -45,7 +45,12 @@ function networkHandlers(role) {
             document.getElementById('mode-selection').style.display = 'none';
             document.getElementById('game-board').classList.remove('is-hidden');
             if (role === 'host') {
-                initMultiplayer(chosenOnlineMode, 'player', true);
+                initMultiplayer(
+                    chosenOnlineMode,
+                    'player',
+                    true,
+                    document.getElementById('game-variant').value
+                );
             }
         },
         onMessage(message) {

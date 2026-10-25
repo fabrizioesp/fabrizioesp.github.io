@@ -2,16 +2,23 @@ import { animateElement } from './animations.js';
 import { createCardElement, findMatch, hasMultipleSumMatches } from './cards.js';
 import { playCardSound, playScopaSound } from './audio.js';
 import { renderBoard } from './render.js';
-import { calculateRoundScore } from './scoring.js';
+import { calculateRoundScore, calculateSbarazzoPoints } from './scoring.js';
 import { game, suits, values } from './state.js';
 import { disconnectNetwork, sendMessage } from './network.js';
 
 const CAPTURE_PREVIEW_DURATION = 1000;
+const SBARAZZO_ANNOUNCEMENT_DURATION = 2000;
+const GAME_VARIANTS = ['classic', 'sbarazzo'];
+let lastShownSbarazzoAnnouncementId = null;
+let matchSequence = 0;
 
-export function initGame(mode) {
+export function initGame(mode, gameVariant) {
     const matchTargets = { single: null, 11: 11, 21: 21 };
     if (!Object.hasOwn(matchTargets, mode)) {
         throw new Error(`Modalità di partita non valida: ${mode}`);
+    }
+    if (!GAME_VARIANTS.includes(gameVariant)) {
+        throw new Error(`Variante di gioco non valida: ${gameVariant}`);
     }
 
     game.globalPScore = 0;
@@ -19,16 +26,23 @@ export function initGame(mode) {
     game.multiplayer = false;
     game.multiplayerHost = false;
     game.localSeat = 'player';
+    game.handDealNumber = 0;
+    game.matchId = createMatchId();
+    lastShownSbarazzoAnnouncementId = null;
     game.matchMode = mode;
     game.matchTarget = matchTargets[mode];
+    game.gameVariant = gameVariant;
     game.dealer = 'player';
     startRound();
 }
 
-export function initMultiplayer(mode, localSeat, isHost) {
+export function initMultiplayer(mode, localSeat, isHost, gameVariant) {
     const matchTargets = { single: null, 11: 11, 21: 21 };
     if (!Object.hasOwn(matchTargets, mode)) {
         throw new Error(`Modalità di partita non valida: ${mode}`);
+    }
+    if (!GAME_VARIANTS.includes(gameVariant)) {
+        throw new Error(`Variante di gioco non valida: ${gameVariant}`);
     }
 
     game.multiplayer = true;
@@ -36,10 +50,14 @@ export function initMultiplayer(mode, localSeat, isHost) {
     game.localSeat = localSeat;
     game.matchMode = mode;
     game.matchTarget = matchTargets[mode];
+    game.gameVariant = gameVariant;
 
     if (isHost) {
         game.globalPScore = 0;
         game.globalAScore = 0;
+        game.handDealNumber = 0;
+        game.matchId = createMatchId();
+        lastShownSbarazzoAnnouncementId = null;
         game.dealer = 'player';
         startRound();
     }
@@ -56,9 +74,13 @@ function startRound() {
     game.scopaCardsA = [];
     game.pScope = 0;
     game.aScope = 0;
+    game.sbarazzoPointsP = 0;
+    game.sbarazzoPointsA = 0;
     game.lastCapture = null;
     game.captureChoice = null;
     game.pendingCaptureIds = [];
+    game.sbarazzoRevealedHands = [];
+    game.sbarazzoAnnouncement = null;
     game.isLocked = false;
 
     document.getElementById('deck-pile').className =
@@ -69,31 +91,112 @@ function startRound() {
             game.deck.push({ id: `${value}-${suit}`, value, suit });
         }
     }
-    game.deck.sort(() => Math.random() - 0.5);
-
-    for (let index = 0; index < 4; index++) {
-        game.tableCards.push(game.deck.pop());
-    }
-    dealCards();
+    let openingCards;
+    do {
+        game.deck.sort(() => Math.random() - 0.5);
+        openingCards = [];
+        for (let index = 0; index < 4; index++) {
+            openingCards.push(game.deck.pop());
+        }
+        if (game.gameVariant === 'sbarazzo' &&
+            openingCards.filter(card => card.value === 1).length >= 2) {
+            game.deck.push(...openingCards);
+        }
+    } while (
+        game.gameVariant === 'sbarazzo' &&
+        openingCards.filter(card => card.value === 1).length >= 2
+    );
+    game.tableCards.push(...openingCards);
+    const announcement = dealCards();
 
     game.turn = game.dealer === 'player' ? 'ai' : 'player';
     renderGameBoard();
     if (game.multiplayerHost) {
         sendMessage({ type: 'round-start', mode: game.matchMode, state: getSnapshot() });
+    }
+    if (announcement) {
+        void finishSbarazzoAnnouncement(announcement);
     } else if (!game.multiplayer && game.turn === 'ai') {
         setTimeout(aiPlay, 800);
     }
 }
 
+function createMatchId() {
+    matchSequence++;
+    return `${Date.now()}-${matchSequence}`;
+}
+
 function dealCards() {
     if (game.deck.length === 0) return false;
+    game.handDealNumber++;
+    game.sbarazzoRevealedHands = [];
+    game.sbarazzoAnnouncement = null;
     for (let index = 0; index < 3; index++) {
         game.pHand.push(game.deck.pop());
         game.aHand.push(game.deck.pop());
     }
 
     document.getElementById('deck-pile').style.display = game.deck.length === 0 ? 'none' : 'block';
-    return true;
+
+    if (game.gameVariant !== 'sbarazzo') return null;
+    const declarations = [
+        ['player', game.pHand],
+        ['ai', game.aHand]
+    ]
+        .filter(([, hand]) => hand.length === 3 && hand.reduce((sum, card) => sum + card.value, 0) <= 9)
+        .map(([seat, hand]) => ({ seat, points: calculateSbarazzoPoints(hand) }));
+    if (declarations.length === 0) return null;
+
+    for (const { seat, points } of declarations) {
+        const pointsKey = seat === 'player' ? 'sbarazzoPointsP' : 'sbarazzoPointsA';
+        game[pointsKey] += points;
+    }
+
+    const seats = declarations.map(({ seat }) => seat);
+    game.sbarazzoRevealedHands = seats;
+    game.sbarazzoAnnouncement = {
+        id: `${game.matchId}-${game.handDealNumber}`,
+        seats
+    };
+    game.isLocked = true;
+    return game.sbarazzoAnnouncement;
+}
+
+function showSbarazzoAnnouncement(announcement) {
+    if (!announcement ||
+        typeof announcement.id !== 'string' ||
+        announcement.id.length === 0 ||
+        !Array.isArray(announcement.seats) ||
+        announcement.seats.length === 0 ||
+        announcement.seats.some(seat => seat !== 'player' && seat !== 'ai') ||
+        lastShownSbarazzoAnnouncementId === announcement.id) {
+        return;
+    }
+    lastShownSbarazzoAnnouncementId = announcement.id;
+
+    const banner = document.getElementById('sbarazzo-announcement');
+    const players = announcement.seats.map(seat => {
+        if (!game.multiplayer) return seat === 'player' ? 'Tu' : 'Computer';
+        return seat === game.localSeat ? 'Tu' : 'Avversario';
+    });
+    document.getElementById('sbarazzo-announcement-player').textContent =
+        players.length === 2 ? `${players[0]} e ${players[1]}` : players[0];
+    banner.hidden = false;
+    setTimeout(() => {
+        if (lastShownSbarazzoAnnouncementId === announcement.id) {
+            banner.hidden = true;
+        }
+    }, SBARAZZO_ANNOUNCEMENT_DURATION);
+}
+
+async function finishSbarazzoAnnouncement(announcement) {
+    showSbarazzoAnnouncement(announcement);
+    await new Promise(resolve => setTimeout(resolve, SBARAZZO_ANNOUNCEMENT_DURATION));
+    if (game.sbarazzoAnnouncement?.id !== announcement.id) return;
+
+    game.isLocked = false;
+    renderGameBoard();
+    if (!game.multiplayer && game.turn === 'ai') setTimeout(aiPlay, 800);
 }
 
 export function playerPlay(cardIndex) {
@@ -145,17 +248,25 @@ function getSnapshot() {
     const snapshot = JSON.parse(JSON.stringify(game));
     if (game.multiplayerHost) {
         snapshot.deck = snapshot.deck.map((_, index) => ({ id: `hidden-deck-${index}` }));
-        snapshot.pHand = snapshot.pHand.map((_, index) => ({ id: `hidden-hand-${index}` }));
+        if (!game.sbarazzoRevealedHands.includes('player')) {
+            snapshot.pHand = snapshot.pHand.map((_, index) => ({ id: `hidden-hand-${index}` }));
+        }
     }
     return snapshot;
 }
 
 export function applyRemoteState(snapshot) {
     if (!snapshot || !Array.isArray(snapshot.deck) || !Array.isArray(snapshot.pHand) ||
-        !Array.isArray(snapshot.aHand) || !Array.isArray(snapshot.tableCards)) {
+        !Array.isArray(snapshot.aHand) || !Array.isArray(snapshot.tableCards) ||
+        !Array.isArray(snapshot.sbarazzoRevealedHands) ||
+        snapshot.sbarazzoRevealedHands.some(seat => seat !== 'player' && seat !== 'ai') ||
+        !Number.isInteger(snapshot.sbarazzoPointsP) || snapshot.sbarazzoPointsP < 0 ||
+        !Number.isInteger(snapshot.sbarazzoPointsA) || snapshot.sbarazzoPointsA < 0 ||
+        !GAME_VARIANTS.includes(snapshot.gameVariant)) {
         return;
     }
     Object.assign(game, snapshot, { localSeat: 'ai', multiplayer: true, multiplayerHost: false });
+    showSbarazzoAnnouncement(game.sbarazzoAnnouncement);
     renderBoard(game.localSeat, playerPlay, selectCaptureCard, confirmCaptureChoice);
 }
 
@@ -263,10 +374,22 @@ async function executePlay(cardIndex, isPlayer) {
     hand.splice(cardIndex, 1);
     temporaryTableSpot.remove();
 
-    let match = findMatch(card, game.tableCards);
+    const isFedericianAceMatch = game.gameVariant === 'sbarazzo' &&
+        card.value === 1 &&
+        game.tableCards.some(tableCard => tableCard.value === 1);
+    const isFedericianAceSweep = game.gameVariant === 'sbarazzo' &&
+        card.value === 1 &&
+        game.tableCards.length > 0 &&
+        !isFedericianAceMatch;
+    let match = isFedericianAceSweep
+        ? [...game.tableCards]
+        : findMatch(card, game.tableCards);
     if (match) {
         const matchingValueOnTable = game.tableCards.some(tableCard => tableCard.value === card.value);
-        if ((isPlayer || game.multiplayer) && !matchingValueOnTable && hasMultipleSumMatches(card.value, game.tableCards)) {
+        if (!isFedericianAceSweep &&
+            (isPlayer || game.multiplayer) &&
+            !matchingValueOnTable &&
+            hasMultipleSumMatches(card.value, game.tableCards)) {
             game.tableCards.push(card);
             renderGameBoard();
             match = await requestCaptureChoice(card);
@@ -308,7 +431,10 @@ async function executePlay(cardIndex, isPlayer) {
         captures.push(...matchedCards);
         game.lastCapture = isPlayer ? 'player' : 'ai';
 
-        if (game.tableCards.length === 0 && (game.deck.length > 0 || game.pHand.length > 0 || game.aHand.length > 0)) {
+        if (isFedericianAceSweep ||
+            (!isFedericianAceMatch &&
+                game.tableCards.length === 0 &&
+                (game.deck.length > 0 || game.pHand.length > 0 || game.aHand.length > 0))) {
             playScopaSound();
             if (isPlayer) {
                 game.pScope++;
@@ -326,9 +452,13 @@ async function executePlay(cardIndex, isPlayer) {
 
     if (game.pHand.length === 0 && game.aHand.length === 0) {
         if (game.deck.length > 0) {
-            dealCards();
+            const announcement = dealCards();
             game.turn = isPlayer ? 'ai' : 'player';
-            if (!game.multiplayer && game.turn === 'ai') {
+            if (announcement) {
+                renderGameBoard();
+                await finishSbarazzoAnnouncement(announcement);
+                if (!game.multiplayer && game.turn === 'ai') setTimeout(aiPlay, 800);
+            } else if (!game.multiplayer && game.turn === 'ai') {
                 renderGameBoard();
                 setTimeout(aiPlay, 800);
             } else {
@@ -357,7 +487,15 @@ async function executePlay(cardIndex, isPlayer) {
 }
 
 function calculatePoints() {
-    const score = calculateRoundScore(game.pCaptures, game.aCaptures, game.pScope, game.aScope);
+    const score = calculateRoundScore(
+        game.pCaptures,
+        game.aCaptures,
+        game.pScope,
+        game.aScope,
+        game.gameVariant,
+        game.sbarazzoPointsP,
+        game.sbarazzoPointsA
+    );
     game.globalPScore += score.playerPoints;
     game.globalAScore += score.aiPoints;
 
@@ -376,10 +514,14 @@ function createRoundResult(score) {
         denari: score.playerDenari > 5 ? 'player' :
             (aiDenari > 5 ? 'ai' : 'Nessuno'),
         settebello: score.playerSettebello ? 'player' : 'ai',
+        dieciDenari: score.playerDieciDenari ? 'player' : 'ai',
+        dueDenari: score.playerDueDenari ? 'player' : 'ai',
         primiera: score.playerPrimiera > score.aiPrimiera ? 'player' :
             (score.aiPrimiera > score.playerPrimiera ? 'ai' : 'Pari'),
         playerScope: game.pScope,
         aiScope: game.aScope,
+        sbarazzoPlayerPoints: game.sbarazzoPointsP,
+        sbarazzoAiPoints: game.sbarazzoPointsA,
         playerPoints: score.playerPoints,
         aiPoints: score.aiPoints,
         playerTotal: game.globalPScore,
@@ -398,6 +540,11 @@ function presentRoundResult(result, isController) {
         Carte Lunghe: ${resultSideName(result.longCards)}<br>
         Denari: ${resultSideName(result.denari)}<br>
         Settebello: ${resultSideName(result.settebello)}<br>
+        ${game.gameVariant === 'sbarazzo' ? `
+            Dieci di denari (+1): ${resultSideName(result.dieciDenari)}<br>
+            Due di denari (-5): ${resultSideName(result.dueDenari)}<br>
+            Punti SBARAZZO (+2/+3 coppia/+4 tris): ${scopeLabel('player', result.sbarazzoPlayerPoints)} - ${scopeLabel('ai', result.sbarazzoAiPoints)}<br>
+        ` : ''}
         Primiera: ${resultSideName(result.primiera)}<br>
         Scope Fatte: ${scopeLabel('player', result.playerScope)} - ${scopeLabel('ai', result.aiScope)}<br><br>
         <b style="color:#ffd700;">Punti Round: ${sideName('player')} ${result.playerPoints} - ${sideName('ai')} ${result.aiPoints}</b><br>
@@ -428,12 +575,18 @@ export function showRemoteRoundResult(result) {
 
 function isValidRoundResult(result) {
     const resultNames = ['player', 'ai', 'Nessuno', 'Pari'];
-    const numberFields = [
-        'playerScope', 'aiScope', 'playerPoints', 'aiPoints', 'playerTotal', 'aiTotal'
+    const nonNegativeNumberFields = [
+        'playerScope',
+        'aiScope',
+        'sbarazzoPlayerPoints',
+        'sbarazzoAiPoints'
     ];
+    const signedNumberFields = ['playerPoints', 'aiPoints', 'playerTotal', 'aiTotal'];
     return result && typeof result === 'object' &&
-        ['longCards', 'denari', 'settebello', 'primiera'].every(field => resultNames.includes(result[field])) &&
-        numberFields.every(field => Number.isInteger(result[field]) && result[field] >= 0) &&
+        ['longCards', 'denari', 'settebello', 'dieciDenari', 'dueDenari', 'primiera']
+            .every(field => resultNames.includes(result[field])) &&
+        nonNegativeNumberFields.every(field => Number.isInteger(result[field]) && result[field] >= 0) &&
+        signedNumberFields.every(field => Number.isInteger(result[field])) &&
         typeof result.gameOver === 'boolean';
 }
 
