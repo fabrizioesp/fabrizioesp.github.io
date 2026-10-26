@@ -101,9 +101,9 @@ function startRound() {
             game.deck.push({ id: `${value}-${suit}`, value, suit });
         }
     }
+    shuffleDeck(game.deck);
     let openingCards;
     do {
-        game.deck.sort(() => Math.random() - 0.5);
         openingCards = [];
         for (let index = 0; index < 4; index++) {
             openingCards.push(game.deck.pop());
@@ -111,15 +111,16 @@ function startRound() {
         if (game.gameVariant === 'sbarazzo' &&
             openingCards.filter(card => card.value === 1).length >= 2) {
             game.deck.push(...openingCards);
+            shuffleDeck(game.deck);
         }
     } while (
         game.gameVariant === 'sbarazzo' &&
         openingCards.filter(card => card.value === 1).length >= 2
     );
     game.tableCards.push(...openingCards);
-    const announcement = dealCards();
-
     game.turn = game.dealer === 'player' ? 'ai' : 'player';
+    const announcement = dealCards(game.turn);
+
     renderGameBoard();
     if (game.multiplayerHost) {
         sendMessage({ type: 'round-start', mode: game.matchMode, state: getSnapshot() });
@@ -131,12 +132,19 @@ function startRound() {
     }
 }
 
+function shuffleDeck(deck) {
+    for (let index = deck.length - 1; index > 0; index--) {
+        const swapIndex = Math.floor(Math.random() * (index + 1));
+        [deck[index], deck[swapIndex]] = [deck[swapIndex], deck[index]];
+    }
+}
+
 function createMatchId() {
     matchSequence++;
     return `${Date.now()}-${matchSequence}`;
 }
 
-function dealCards() {
+function dealCards(firstTurn) {
     if (game.deck.length === 0) return false;
     game.handDealNumber++;
     game.sbarazzoRevealedHands = [];
@@ -153,7 +161,11 @@ function dealCards() {
         ['player', game.pHand],
         ['ai', game.aHand]
     ]
-        .filter(([, hand]) => hand.length === 3 && hand.reduce((sum, card) => sum + card.value, 0) <= 9)
+        .filter(([seat, hand]) =>
+            seat === firstTurn &&
+            hand.length === 3 &&
+            hand.reduce((sum, card) => sum + card.value, 0) <= 9
+        )
         .map(([seat, hand]) => ({ seat, points: calculateSbarazzoPoints(hand) }));
     if (declarations.length === 0) return null;
 
@@ -478,8 +490,8 @@ async function executePlay(cardIndex, isPlayer) {
 
     if (game.pHand.length === 0 && game.aHand.length === 0) {
         if (game.deck.length > 0) {
-            const announcement = dealCards();
             game.turn = isPlayer ? 'ai' : 'player';
+            const announcement = dealCards(game.turn);
             if (announcement) {
                 renderGameBoard();
                 await finishSbarazzoAnnouncement(announcement);
